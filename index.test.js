@@ -157,4 +157,52 @@ describe('Collector', () => {
     expect(stat[TABLE_ADDR_1].player).eq(0.0008816666666666667);
     expect(stat[TABLE_ADDR_2].player).eq(0.0006334916666666667);
   });
+
+  it('should process HandComplete message', async () => {
+    const message = {
+      Subject: 'HandComplete::0x0000000001',
+    };
+
+    sinon.stub(sdb, 'putAttributes').yields(null, {});
+    sinon.stub(dynamo, 'query').yields(null, {
+      Items: [
+        {
+          tableAddr: '0x0000000001',
+          handId: '1',
+          lineup: [
+            { address: '0xaaaabbbbccc' },
+            { address: '0x0000000000000000000000000000000000000000' },
+            { address: '0x0000000000000000000000000000000000000000' },
+            { address: '0x0000000000000000000000000000000000000000' },
+          ],
+        },
+      ],
+    });
+
+    const collector = new Collector(
+      sentry,
+      new Db(sdb, dynamo, 'statTable', 'pokerTable'),
+      new EtherScan(http.request, 'http://api', 'key'),
+    );
+
+    await Promise.all(collector.processMessage(message));
+
+    expect(sdb.putAttributes).callCount(1);
+    expect(sdb.putAttributes).calledWith({
+      DomainName: 'statTable',
+      ItemName: '0x0000000001-2',
+      Attributes: [
+        { Name: 'tableAddr', Value: '0x0000000001' },
+        { Name: 'handId', Value: '2' },
+        { Name: 'playersCount', Value: '1' },
+        { Name: 'created', Value: String(Math.round(Date.now() / 1000)) },
+      ],
+    });
+  });
+
+  afterEach(() => {
+    if (sdb.select.restore) sdb.select.restore();
+    if (dynamo.query.restore) dynamo.query.restore();
+    if (http.request.restore) http.request.restore();
+  });
 });

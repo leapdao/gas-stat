@@ -37,8 +37,8 @@ export default class Db {
 
   async addHand(tableAddr) {
     const lastHand = await this.getLastHand(tableAddr);
-    const nextHandId = lastHand.handId + 1;
-    this.putAttributes({
+    const nextHandId = Number(lastHand.handId) + 1;
+    return this.putAttributes({
       DomainName: this.sdbTableName,
       ItemName: `${tableAddr}-${nextHandId}`,
       Attributes: [
@@ -46,7 +46,7 @@ export default class Db {
         { Name: 'handId', Value: String(nextHandId) },
         {
           Name: 'playersCount',
-          Value: String(lastHand.filter(item => item.address !== EMPTY_ADDR).length),
+          Value: String(lastHand.lineup.filter(item => item.address !== EMPTY_ADDR).length),
         },
         { Name: 'created', Value: String(Math.round(Date.now() / 1000)) },
       ],
