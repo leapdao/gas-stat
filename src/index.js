@@ -5,9 +5,10 @@ const ETH_DECIMALS = new BigNumber(10).pow(18);
 
 export default class Collector {
 
-  constructor(sentry, db) {
+  constructor(sentry, db, etherScan) {
     this.sentry = sentry;
     this.db = db;
+    this.etherScan = etherScan;
   }
 
   processMessage(message) {
@@ -38,11 +39,11 @@ export default class Collector {
     return this.db.addHand(tableAddr);
   }
 
-  async queryStat(from, to) {
+  async queryStat(accountAddress, from, to) {
     const hands = await this.db.handsInRange(from, to);
+    const { result: transactions } = await this.etherScan.getAccountTransactions(accountAddress);
     const tables = _.groupBy(hands, 'tableAddr');
     const tableAddrs = Object.keys(tables);
-    const { result: transactions } = { result: [] };
 
     const result = {};
     for (let i = 0; i < tableAddrs.length; i += 1) {

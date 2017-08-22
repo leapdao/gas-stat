@@ -2,16 +2,17 @@ import Web3 from 'web3';
 import Raven from 'raven';
 import AWS from 'aws-sdk';
 import doc from 'dynamodb-doc';
+import request from 'request';
 
 import Db from './src/db';
 import Collector from './src/index';
+import EtherScan from './src/etherscan';
 
 let web3Provider;
 const simpledb = new AWS.SimpleDB();
 const dynamo = new doc.DynamoDB();
 
 exports.handler = function handler(event, context, callback) {
-
   Raven.config(process.env.SENTRY_URL).install();
 
   if (event.Records && event.Records instanceof Array) {
@@ -22,7 +23,6 @@ exports.handler = function handler(event, context, callback) {
     }
     web3 = new Web3(web3Provider);
 
-
     let requests = [];
     const collector = new Collector(
       Raven,
@@ -31,6 +31,11 @@ exports.handler = function handler(event, context, callback) {
         dynamo,
         process.env.SDB_TABLE_NAME,
         process.env.DYNAMO_TABLE_NAME,
+      ),
+      new EtherScan(
+        request,
+        process.env.ETHERSCAN_API_URL,
+        process.env.ETHERSCAN_API_KEY,
       ),
     );
     for (let i = 0; i < event.Records.length; i += 1) {
