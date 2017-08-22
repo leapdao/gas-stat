@@ -45,43 +45,44 @@ export default class Collector {
     const tables = _.groupBy(hands, 'tableAddr');
     const tableAddrs = Object.keys(tables);
 
-    const result = {};
-    for (let i = 0; i < tableAddrs.length; i += 1) {
-      const tableAddr = tableAddrs[i];
+    return tableAddrs.reduce((result, tableAddr) => {
       const tableTransactions = transactions.filter(tx => tx.to === tableAddr);
-      const tableStat = {
-        hand: new BigNumber(0),
-        player: new BigNumber(0),
+      const tableStat = tables[tableAddr].reduce(
+        tableStatReducer(to, tableTransactions),
+        { hand: new BigNumber(0), player: new BigNumber(0) }
+      );
+
+      return {
+        ...result,
+        [tableAddr]: {
+          handsCount: tables[tableAddr].length,
+          hand: tableStat.hand.div(tables[tableAddr].length).div(ETH_DECIMALS).toNumber(),
+          player: tableStat.player.div(tables[tableAddr].length).div(ETH_DECIMALS).toNumber(),
+        },
       };
-      for (let j = 0; j < tables[tableAddr].length; j += 1) {
-        const hand = tables[tableAddr][j];
-        const nextHand = tables[tableAddr][j + 1];
-        const handStart = Number(hand.created);
-        const handFinish = nextHand ? Number(nextHand.created) : to;
-        const handTransactions = tableTransactions.filter(
-          tx => between(tx.timeStamp, handStart, handFinish),
-        );
-
-        const spent = handTransactions.reduce(
-          (memo, tx) => memo.add(new BigNumber(tx.gasUsed).mul(tx.gasPrice)),
-          new BigNumber(0),
-        );
-
-        tableStat.player = spent.div(Number(hand.playersCount)).add(tableStat.player);
-        tableStat.hand = tableStat.hand.add(spent);
-      }
-
-      result[tableAddr] = {
-        handsCount: tables[tableAddr].length,
-        hand: tableStat.hand.div(tables[tableAddr].length).div(ETH_DECIMALS).toNumber(),
-        player: tableStat.player.div(tables[tableAddr].length).div(ETH_DECIMALS).toNumber(),
-      };
-    }
-
-    return result;
+    }, {});
   }
 
 }
+
+const tableStatReducer = (to, tableTransactions) => (tableStat, hand, i, hands) => {
+  const nextHand = hands[i + 1];
+  const handStart = Number(hand.created);
+  const handFinish = nextHand ? Number(nextHand.created) : to;
+  const handTransactions = tableTransactions.filter(
+    tx => between(tx.timeStamp, handStart, handFinish),
+  );
+
+  const spent = handTransactions.reduce(
+    (memo, tx) => memo.add(new BigNumber(tx.gasUsed).mul(tx.gasPrice)),
+    new BigNumber(0),
+  );
+
+  return {
+    player: spent.div(Number(hand.playersCount)).add(tableStat.player),
+    hand: tableStat.hand.add(spent),
+  };
+};
 
 function between(n, min, max) {
   return Number(n) >= min && Number(n) <= max;
