@@ -78,7 +78,6 @@ describe('Collector', () => {
         },
       ],
     });
-
     sinon.stub(http, 'request').yields(null, { statusCode: 200 }, {
       result: [
         {
@@ -87,6 +86,13 @@ describe('Collector', () => {
           gas: '200000',
           gasPrice: '20000000000',
           gasUsed: '21000',
+        },
+        {
+          timeStamp: now - (60 * 60 * 9),
+          to: TABLE_ADDR_1,
+          gas: '200000',
+          gasPrice: '20000000000',
+          gasUsed: '22000',
         },
         {
           timeStamp: now - (60 * 60),
@@ -146,9 +152,9 @@ describe('Collector', () => {
     );
 
     expect(Object.keys(stat).length).eq(2);
-    expect(stat[TABLE_ADDR_1].hand).eq(0.00221);
+    expect(stat[TABLE_ADDR_1].hand).eq(0.00243);
     expect(stat[TABLE_ADDR_2].hand).eq(0.00156002);
-    expect(stat[TABLE_ADDR_1].player).eq(0.0028766666666666667);
-    expect(stat[TABLE_ADDR_2].player).eq(0.001900475);
+    expect(stat[TABLE_ADDR_1].player).eq(0.0008816666666666667);
+    expect(stat[TABLE_ADDR_2].player).eq(0.0006334916666666667);
   });
 });

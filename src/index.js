@@ -67,8 +67,8 @@ export default class Collector {
           new BigNumber(0),
         );
 
+        tableStat.player = spent.div(Number(hand.playersCount)).add(tableStat.player);
         tableStat.hand = tableStat.hand.add(spent);
-        tableStat.player = spent.div(Number(hand.playersCount)).add(tableStat.hand);
       }
 
       result[tableAddr] = {
