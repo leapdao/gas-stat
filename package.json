@@ -4,6 +4,9 @@
   "main": "index.js",
   "author": "Alex Lunyov <isuntc@gmail.com>",
   "license": "MIT",
+  "scripts": {
+    "test": "mocha -r babel-register -r babel-polyfill index.test.js"
+  },
   "devDependencies": {
     "babel-cli": "^6.16.0",
     "babel-core": "^6.17.0",

@@ -28,7 +28,7 @@ export default class Db {
   }
 
   async getHandsInRange(from, to) {
-    const { Items = [] } = this.select({
+    const { Items = [] } = await this.select({
       SelectExpression: `SELECT * FROM \`${this.sdbTableName}\` WHERE \`created\` >= '${from}' AND \`created\` <= '${to}' ORDER BY \`created\` ASC`,
     });
 
