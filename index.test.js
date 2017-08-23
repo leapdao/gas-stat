@@ -36,10 +36,16 @@ const http = {
   request() {},
 };
 
+const web3 = {
+  eth: {
+    blockNumber: 100500,
+  },
+};
+
 const now = Math.round(Date.now() / 1000);
 
 describe('Collector', () => {
-  it('should return stat for account in given time range', async () => {
+  it('should return stat for account', async () => {
     const TABLE_ADDR_1 = '0x0000000001';
     const TABLE_ADDR_2 = '0x0000000002';
     sinon.stub(sdb, 'select').yields(null, {
@@ -78,7 +84,7 @@ describe('Collector', () => {
         },
       ],
     });
-    sinon.stub(http, 'request').yields(null, { statusCode: 200 }, {
+    sinon.stub(http, 'request').yields(null, { statusCode: 200 }, JSON.stringify({
       result: [
         {
           timeStamp: now - (60 * 60 * 10),
@@ -137,12 +143,13 @@ describe('Collector', () => {
           gasUsed: '51072',
         },
       ],
-    });
+    }));
 
     const collector = new Collector(
       sentry,
       new Db(sdb, dynamo, 'statTable', 'pokerTable'),
       new EtherScan(http.request, 'http://api', 'key'),
+      web3,
     );
 
     const stat = await collector.queryStat(
@@ -183,6 +190,7 @@ describe('Collector', () => {
       sentry,
       new Db(sdb, dynamo, 'statTable', 'pokerTable'),
       new EtherScan(http.request, 'http://api', 'key'),
+      web3,
     );
 
     await Promise.all(collector.processMessage(message));

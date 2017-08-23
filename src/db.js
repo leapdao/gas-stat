@@ -9,11 +9,15 @@ export default class Db {
     this.dynamo = dynamo;
     this.sdbTableName = sdbTableName;
     this.dynamoTableName = dynamoTableName;
+
+    // this.createDomain({
+    //   DomainName: this.sdbTableName,
+    // });
   }
 
   async getLastHand(tableAddr, scanForward) {
     const { Items } = await this.query({
-      TableName: this.tableName,
+      TableName: this.dynamoTableName,
       KeyConditionExpression: 'tableAddr = :a',
       ExpressionAttributeValues: { ':a': tableAddr },
       Limit: 1,

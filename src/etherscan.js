@@ -8,7 +8,7 @@ export default class EtherScan {
     this.apiKey = apiKey;
   }
 
-  getAccountTransactions(accountAddress) {
+  getAccountTransactions(accountAddress, fromBlock, toBlock) {
     const headers = {
       'Content-Type': 'application/json',
     };
@@ -19,13 +19,15 @@ export default class EtherScan {
       address: accountAddress,
       sort: 'asc',
       apikey: this.apiKey,
+      startblock: fromBlock,
+      endblock: toBlock,
     });
 
     return this.request({
       url: `${this.apiUrl}?${params}`,
       method: 'POST',
       headers,
-    });
+    }).then(r => JSON.parse(r));
   }
 
   request(options) {

@@ -5,10 +5,11 @@ const ETH_DECIMALS = new BigNumber(10).pow(18);
 
 export default class Collector {
 
-  constructor(sentry, db, etherScan) {
+  constructor(sentry, db, etherScan, web3) {
     this.sentry = sentry;
     this.db = db;
     this.etherScan = etherScan;
+    this.web3 = web3;
   }
 
   processMessage(message) {
@@ -19,10 +20,14 @@ export default class Collector {
     }
 
     try {
-      const msgBody = (message.Message && message.Message.length > 0) ? JSON.parse(message.Message) : '';
+      // const msgBody = (
+      //   (message.Message && message.Message.length > 0)
+      //     ? JSON.parse(message.Message)
+      //     : ''
+      // );
       const [msgType, msgArg] = message.Subject.split('::');
 
-      console.log(msgBody);
+      // console.log(msgBody);
 
       if (msgType === 'HandComplete') {
         tasks.push(this.handleNewHand(msgArg));
@@ -39,17 +44,28 @@ export default class Collector {
     return this.db.addHand(tableAddr);
   }
 
-  async queryStat(accountAddress, from, to) {
-    const hands = await this.db.getHandsInRange(from, to);
-    const { result: transactions } = await this.etherScan.getAccountTransactions(accountAddress);
+  async queryStat(accountAddress) {
+    const blockNumber = await this.getBlockNumber();
+    const { result: transactions } = await this.etherScan.getAccountTransactions(
+      accountAddress,
+      blockNumber - (4 * 60 * 24),
+      blockNumber,
+    );
+
+    if (transactions.length === 0) {
+      return {};
+    }
+
+    const now = Math.round(Date.now() / 1000);
+    const hands = await this.db.getHandsInRange(Number(transactions[0].timeStamp), now);
     const tables = _.groupBy(hands, 'tableAddr');
     const tableAddrs = Object.keys(tables);
 
     return tableAddrs.reduce((result, tableAddr) => {
       const tableTransactions = transactions.filter(tx => tx.to === tableAddr);
       const tableStat = tables[tableAddr].reduce(
-        tableStatReducer(to, tableTransactions),
-        { hand: new BigNumber(0), player: new BigNumber(0) }
+        tableStatReducer(now, tableTransactions),
+        { hand: new BigNumber(0), player: new BigNumber(0) },
       );
 
       return {
@@ -61,6 +77,34 @@ export default class Collector {
         },
       };
     }, {});
+  }
+
+  log(message, context) {
+    const cntxt = (context) || {};
+    cntxt.level = (cntxt.level) ? cntxt.level : 'info';
+    cntxt.server_name = 'gas-stat';
+    return new Promise((resolve, reject) => {
+      const now = Math.floor(Date.now() / 1000);
+      this.sentry.captureMessage(`${now} - ${message}`, cntxt, (error, eventId) => {
+        if (error) {
+          reject(error);
+          return;
+        }
+        resolve(eventId);
+      });
+    });
+  }
+
+  getBlockNumber() {
+    return new Promise((resolve, reject) => {
+      this.web3.eth.getBlockNumber((err, result) => {
+        if (err) {
+          reject(err);
+        } else {
+          resolve(result);
+        }
+      });
+    });
   }
 
 }
