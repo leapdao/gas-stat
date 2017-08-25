@@ -1,6 +1,7 @@
 import _ from 'lodash';
 import BigNumber from 'bignumber.js';
 
+const EMPTY_ADDR = '0x0000000000000000000000000000000000000000';
 const ETH_DECIMALS = new BigNumber(10).pow(18);
 
 export default class Collector {
@@ -40,8 +41,20 @@ export default class Collector {
     return tasks;
   }
 
-  handleNewHand(tableAddr) {
-    return this.db.addHand(tableAddr);
+  async handleNewHand(tableAddr) {
+    const lastHand = await this.db.getLastHand(tableAddr, true);
+    // await this.log('Write Stat Hand', {
+    //   tags: { tableAddr },
+    //   extra: {
+    //     lastHandId: lastHand.handId,
+    //   },
+    // });
+
+    return this.db.addHand(
+      tableAddr,
+      Number(lastHand.handId) + 1,
+      lastHand.lineup.filter(item => item.address !== EMPTY_ADDR).length,
+    );
   }
 
   async queryStat(accountAddress) {

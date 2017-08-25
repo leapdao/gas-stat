@@ -1,7 +1,5 @@
 import { dbMethod, transform } from './utils';
 
-const EMPTY_ADDR = '0x0000000000000000000000000000000000000000';
-
 export default class Db {
 
   constructor(sdb, dynamo, sdbTableName, dynamoTableName) {
@@ -16,19 +14,20 @@ export default class Db {
   }
 
   async getLastHand(tableAddr, scanForward) {
-    const { Items } = await this.query({
+    const data = await this.query({
       TableName: this.dynamoTableName,
       KeyConditionExpression: 'tableAddr = :a',
       ExpressionAttributeValues: { ':a': tableAddr },
-      Limit: 1,
       ScanIndexForward: scanForward,
     });
 
-    if (!Items || !Items[0]) {
+    const items = (data.Items || []).sort((a, b) => Number(b.changed) - Number(a.changed));
+
+    if (items.length === 0) {
       throw new Error(`Table ${tableAddr} doesn't exists`);
     }
 
-    return Items[0];
+    return items[0];
   }
 
   async getHandsInRange(from, to) {
@@ -39,18 +38,16 @@ export default class Db {
     return Items.map(item => transform(item.Attributes));
   }
 
-  async addHand(tableAddr) {
-    const lastHand = await this.getLastHand(tableAddr);
-    const nextHandId = Number(lastHand.handId) + 1;
+  async addHand(tableAddr, handId, playersCount) {
     return this.putAttributes({
       DomainName: this.sdbTableName,
-      ItemName: `${tableAddr}-${nextHandId}`,
+      ItemName: `${tableAddr}-${handId}`,
       Attributes: [
         { Name: 'tableAddr', Value: tableAddr },
-        { Name: 'handId', Value: String(nextHandId) },
+        { Name: 'handId', Value: String(handId) },
         {
           Name: 'playersCount',
-          Value: String(lastHand.lineup.filter(item => item.address !== EMPTY_ADDR).length),
+          Value: String(playersCount),
         },
         { Name: 'created', Value: String(Math.round(Date.now() / 1000)) },
       ],

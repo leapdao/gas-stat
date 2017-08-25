@@ -38,7 +38,7 @@ const http = {
 
 const web3 = {
   eth: {
-    blockNumber: 100500,
+    getBlockNumber() {},
   },
 };
 
@@ -48,6 +48,7 @@ describe('Collector', () => {
   it('should return stat for account', async () => {
     const TABLE_ADDR_1 = '0x0000000001';
     const TABLE_ADDR_2 = '0x0000000002';
+    sinon.stub(web3.eth, 'getBlockNumber').yields(null, 700000);
     sinon.stub(sdb, 'select').yields(null, {
       Items: [
         {
@@ -170,6 +171,7 @@ describe('Collector', () => {
       Subject: 'HandComplete::0x0000000001',
     };
 
+    sinon.stub(sentry, 'captureMessage').yields(null, {});
     sinon.stub(sdb, 'putAttributes').yields(null, {});
     sinon.stub(dynamo, 'query').yields(null, {
       Items: [
